@@ -1,11 +1,5 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "frontend-xapobank/**", "use": "@vercel/static" }
-  ],
-  "routes": [
-    { "src": "/api/(.)", "dest": "https://backend-wnsn.onrender.com/api/$1" },
-    { "src": "/socket.io/(.)", "dest": "/frontend-xapobank/$1" }
-  ]
+  "builds": [{ "src": "transaction-admin-site/**", "use": "@vercel/static" }],
+  "routes": [{ "src": "/admin/(.*)", "dest": "/transaction-admin-site/$1" }]
 }
- 
