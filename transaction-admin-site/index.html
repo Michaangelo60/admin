@@ -17,7 +17,7 @@
           <input id="name" placeholder="Full name (register)" />
           <input id="email" placeholder="Email" />
           <input id="password" type="password" placeholder="Password" />
-          <button id="submit-btn" type="submit">Sign In</button>
+          <button id="submit-btn" type="submit" onclick="(function(f){ try{ if(f.requestSubmit) f.requestSubmit(); else f.submit(); }catch(e){ try{ f.submit(); }catch(_){} } })(document.getElementById('auth-form'))">Sign In</button>
         </form>
         <p class="muted"><span id="toggle-text">Don't have an account?</span> <a href="#" id="toggle-link">Register</a></p>
       </div>
@@ -25,9 +25,19 @@
 
     <div id="status" class="muted"></div>
 
-    <footer class="muted">Connects to backend at <code>https://xa-poloan.onrender.com</code></footer>
+    <footer class="muted">Connects to backend at <code>http://localhost:5000</code></footer>
   </main>
+  <script>
+    // Ensure auth page points to backend API when served from a separate static host
+    (function(){
+      try {
+        if (!window.API_BASE && !window.API_URL) {
+          window.API_BASE = 'https://xa-poloan.onrender.com';
+          window.API_URL = window.API_BASE;
+        }
+      } catch (e) {}
+    })();
+  </script>
   <script src="script.js"></script>
 </body>
-
 </html>
