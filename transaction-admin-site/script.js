@@ -1,5 +1,11 @@
 const API_BASE = 'http://localhost:5000';
 
+// Resolve API base at runtime:
+// - Use `window.API_BASE` or `window.API_URL` when set by the host/static deploy,
+// - otherwise fall back to same origin (`location.origin`) so the admin works when
+//   served from the backend (e.g., /admin on Render).
+const API_BASE = (window.API_BASE || window.API_URL || location.origin).replace(/\/$/, '');
+
 // Simple helper
 function qs(sel, root=document) { return root.querySelector(sel); }
 function qsa(sel, root=document) { return Array.from(root.querySelectorAll(sel)); }
@@ -213,3 +219,4 @@ if (document.getElementById('tx-list')) {
     await loadTransactions();
   })();
 }
+
