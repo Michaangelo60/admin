@@ -18,6 +18,17 @@
     <div id="tx-list">Loading...</div>
     <div id="status" class="muted"></div>
   </main>
-  <script src="script.js"></script>
+    <script>
+      // Ensure admin page points to backend API when served from a separate static host
+      (function(){
+        try {
+          if (!window.API_BASE && !window.API_URL) {
+            window.API_BASE = 'https://xa-poloan.onrender.com';
+            window.API_URL = window.API_BASE;
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script src="script.js"></script>
 </body>
 </html>
