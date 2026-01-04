@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Transaction Admin - Login / Register</title>
   <link rel="stylesheet" href="style.css">
+  <script src="/config.js"></script>
 </head>
 <body>
   <main class="container">
@@ -19,13 +20,13 @@
           <input id="password" type="password" placeholder="Password" />
           <button id="submit-btn" type="submit" onclick="(function(f){ try{ if(f.requestSubmit) f.requestSubmit(); else f.submit(); }catch(e){ try{ f.submit(); }catch(_){} } })(document.getElementById('auth-form'))">Sign In</button>
         </form>
-        <p class="muted"><span id="toggle-text">Don't have an account?</span> <a href="#" id="toggle-link">Register</a></p>
+        <p class="muted"><span id="toggle-text">Don't have an account?</span> <a href="javascript:void(0)" id="toggle-link">Register</a></p>
       </div>
     </div>
 
     <div id="status" class="muted"></div>
 
-    <footer class="muted">Connects to backend at <code>http://localhost:5000</code></footer>
+    <footer class="muted">Connects to backend at <code id="backend-origin">http://localhost:5000</code></footer>
   </main>
   <script>
     // Ensure auth page points to backend API when served from a separate static host
@@ -36,6 +37,7 @@
           window.API_URL = window.API_BASE;
         }
       } catch (e) {}
+      try { if (window.API_BASE) document.getElementById('backend-origin').textContent = window.API_BASE; } catch(e){}
     })();
   </script>
   <script src="script.js"></script>
