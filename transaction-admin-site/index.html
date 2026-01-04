@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin Dashboard - Transactions</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:#071021;color:#e6eef8;padding:20px}
+    .wrap{max-width:1100px;margin:0 auto}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    .btn{background:#0ea5e9;border:none;padding:8px 12px;border-radius:6px;color:#031022;cursor:pointer}
+    .muted{opacity:0.75}
+    .list{display:grid;grid-template-columns:1fr 360px;gap:12px}
+    .panel{background:#051426;padding:12px;border-radius:8px}
+    .tx{padding:10px;border-radius:6px;background:#041423;margin-bottom:8px}
+    .tx .meta{font-size:13px;color:#9cc9e6}
+    .actions{display:flex;gap:8px;margin-top:8px}
+    pre{background:#02131f;padding:10px;border-radius:6px;overflow:auto}
+    select,input{padding:6px;border-radius:6px;border:1px solid #123;background:#042033;color:#e6eef8}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Admin Dashboard — Transactions</h1>
+      <div>
+        <button id="btn-back" class="btn">Back to Admin</button>
+      </div>
+    </header>
+
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+      <label class="muted">Filter:</label>
+      <select id="filter-type"><option value="">All</option><option>deposit</option><option>loan</option><option>membership</option><option>withdrawal</option></select>
+      <label class="muted">Status:</label>
+      <select id="filter-status"><option value="">Any</option><option>pending</option><option>processing</option><option>completed</option><option>confirmed</option></select>
+      <button id="refresh" class="btn">Refresh</button>
+      <div style="flex:1"></div>
+      <div class="muted">API: <span id="api-base">-</span></div>
+    </div>
+
+    <div class="list">
+      <div class="panel" style="min-height:400px">
+        <h3>Transactions</h3>
+        <div id="tx-list">Loading...</div>
+      </div>
+
+      <div class="panel">
+        <h3>Details</h3>
+        <div id="details">Select a transaction to view details</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = (window.API_BASE || window.ADMIN_API || 'https://xa-poloan.onrender.com').replace(/\/$/, '');
+    document.getElementById('api-base').textContent = API_BASE;
+    document.getElementById('btn-back').addEventListener('click', ()=> location.href = '/admin/admin.html');
+
+    function authHeaders(){ const t = localStorage.getItem('admin_token') || localStorage.getItem('token'); return t ? { 'Authorization': 'Bearer ' + t } : {}; }
+
+    async function fetchTx(){
+      document.getElementById('tx-list').textContent = 'Loading...';
+      try {
+        const res = await fetch(API_BASE + '/api/transactions', { headers: authHeaders() });
+        const j = await res.json().catch(()=>null);
+        if (!res.ok) return document.getElementById('tx-list').textContent = 'Failed: ' + (j && j.error ? j.error : res.status);
+        const items = Array.isArray(j.data) ? j.data : (Array.isArray(j)? j : (j.data||[]));
+        renderList(items || []);
+      } catch (e) { document.getElementById('tx-list').textContent = String(e); }
+    }
+
+    function renderList(list){
+      const container = document.getElementById('tx-list');
+      const fType = document.getElementById('filter-type').value.toLowerCase();
+      const fStatus = document.getElementById('filter-status').value.toLowerCase();
+      const filtered = list.filter(t => {
+        if (fType && String(t.type||'').toLowerCase() !== fType) return false;
+        if (fStatus && String(t.status||'').toLowerCase() !== fStatus) return false;
+        return true;
+      });
+      if (!filtered.length) return container.innerHTML = '<div class="muted">No transactions</div>';
+      container.innerHTML = filtered.map(t => {
+        const id = t._id || t.transactionId || '';
+        const user = t.userEmail || t.user || '';
+        const amount = typeof t.amount === 'number' ? '$'+t.amount.toFixed(2) : (t.amount||'');
+        const when = new Date(t.timestamp||t.createdAt||Date.now()).toLocaleString();
+        return `<div class="tx" data-id="${id}" data-json='${JSON.stringify(t).replace(/'/g,"\\'")}'><div><strong>${t.type||'tx'}</strong> — ${amount}</div><div class="meta">${id} • ${when} • ${user} • status: ${t.status}</div><div class="actions"><button class="view">View</button><button class="approve">Approve</button><button class="mark-pending">Mark Pending</button></div></div>`;
+      }).join('');
+      // attach handlers
+      Array.from(document.querySelectorAll('.tx .view')).forEach(b=>b.addEventListener('click', e=>{
+        const el = e.target.closest('.tx'); showDetails(JSON.parse(el.getAttribute('data-json')));
+      }));
+      Array.from(document.querySelectorAll('.tx .approve')).forEach(b=>b.addEventListener('click', e=> changeStatus(e,'Completed')));
+      Array.from(document.querySelectorAll('.tx .mark-pending')).forEach(b=>b.addEventListener('click', e=> changeStatus(e,'pending')));
+    }
+
+    function showDetails(tx){
+      const d = document.getElementById('details');
+      // build details with quick actions if userId present
+      let html = `<pre>${JSON.stringify(tx,null,2)}</pre>`;
+      if (tx.userId) {
+        html += `<div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">`;
+        html += `<div><strong>Membership</strong> <button id="grant-membership" class="btn">Grant</button> <button id="revoke-membership" class="btn">Revoke</button></div>`;
+        html += `<div><strong>Adjust Balances</strong> <input id="adj-amount" placeholder="amount" style="width:140px;margin-left:8px" /> <select id="adj-type"><option value="savings">Savings</option><option value="collateral">Collateral</option></select> <button id="adj-add" class="btn">Add</button> <button id="adj-set" class="btn">Set</button></div>`;
+        html += `</div>`;
+      }
+      d.innerHTML = html;
+      if (tx.userId) {
+        document.getElementById('grant-membership').addEventListener('click', ()=>adminMembership(tx.userId,'grant'));
+        document.getElementById('revoke-membership').addEventListener('click', ()=>adminMembership(tx.userId,'revoke'));
+        document.getElementById('adj-add').addEventListener('click', ()=>adminAdjustBalance(tx.userId,'add'));
+        document.getElementById('adj-set').addEventListener('click', ()=>adminAdjustBalance(tx.userId,'set'));
+      }
+    }
+
+    async function adminMembership(userId, action) {
+      if (!confirm(`${action} membership for user ${userId}?`)) return;
+      try {
+        const res = await fetch(API_BASE + '/api/admin/user/' + userId + '/membership', { method:'POST', headers: Object.assign({'Content-Type':'application/json'}, authHeaders()), body: JSON.stringify({ action }) });
+        const j = await res.json().catch(()=>null);
+        if (!res.ok) return alert('Failed: ' + (j && j.error ? j.error : res.status));
+        alert('OK: ' + JSON.stringify(j));
+      } catch (e) { alert(String(e)); }
+    }
+
+    async function adminAdjustBalance(userId, op) {
+      const amt = Number(document.getElementById('adj-amount').value || 0);
+      const type = document.getElementById('adj-type').value || 'savings';
+      if (!confirm(`${op} ${amt} ${type} for user ${userId}?`)) return;
+      try {
+        const res = await fetch(API_BASE + '/api/admin/user/' + userId + '/balance', { method:'POST', headers: Object.assign({'Content-Type':'application/json'}, authHeaders()), body: JSON.stringify({ type: type === 'collateral' ? 'collateral' : 'savings', operation: op, amount: amt }) });
+        const j = await res.json().catch(()=>null);
+        if (!res.ok) return alert('Failed: ' + (j && j.error ? j.error : res.status));
+        alert('OK: ' + JSON.stringify(j));
+        fetchTx();
+      } catch (e) { alert(String(e)); }
+    }
+
+    async function changeStatus(e, status){
+      const el = e.target.closest('.tx');
+      const id = el.dataset.id;
+      if (!confirm('Change status to '+status+'?')) return;
+      try {
+        const res = await fetch(API_BASE + '/api/transactions/' + id + '/status', { method:'PATCH', headers: Object.assign({'Content-Type':'application/json'}, authHeaders()), body: JSON.stringify({ status }) });
+        const j = await res.json().catch(()=>null);
+        if (!res.ok) return alert('Failed: ' + (j && j.error ? j.error : res.status));
+        alert('Updated');
+        fetchTx();
+      } catch (err) { alert(String(err)); }
+    }
+
+    document.getElementById('refresh').addEventListener('click', fetchTx);
+    document.getElementById('filter-type').addEventListener('change', fetchTx);
+    document.getElementById('filter-status').addEventListener('change', fetchTx);
+
+    // initial
+    fetchTx();
+  </script>
+</body>
+</html>
