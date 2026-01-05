@@ -60,8 +60,16 @@ if (document.getElementById('auth-form')) {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ email, password })
       });
-      const loginJ = await loginRes.json().catch(()=>({}));
-      if (!loginRes.ok) throw new Error(loginJ.message || 'Login failed');
+      let loginJ = {};
+      try {
+        loginJ = await loginRes.json();
+      } catch (e) {
+        // If response isn't JSON (empty body, HTML error page, etc.), capture text for debugging
+        const raw = await loginRes.text().catch(()=>'<unreadable body>');
+        console.error('Login response not JSON. status=', loginRes.status, 'body=', raw);
+        loginJ = {};
+      }
+      if (!loginRes.ok) throw new Error(loginJ.message || `Login failed (${loginRes.status})`);
       // store token + user then go to admin
       if (loginJ && (loginJ.token || loginJ.data?.token)) {
         const token = loginJ.token || loginJ.data.token;
