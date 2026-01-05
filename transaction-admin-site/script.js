@@ -98,12 +98,14 @@ if (document.getElementById('tx-list')) {
   const statusEl = qs('#status');
   const userInfoEl = qs('#user-info');
   const refreshBtn = qs('#refresh-btn');
-  const promoteBtn = qs('#promote-btn');
+   const promoteBtn = qs('#promote-btn');
+   const confirmTxBtn = qs('#confirm-tx-btn');
   const logoutBtn = qs('#logout-btn');
 
   logoutBtn.addEventListener('click', () => { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = 'index.html'; });
   refreshBtn.addEventListener('click', loadTransactions);
   if (promoteBtn) promoteBtn.addEventListener('click', promoteToAdmin);
+    if (confirmTxBtn) confirmTxBtn.addEventListener('click', confirmTransactionById);
 
   async function promoteToAdmin() {
     if (!confirm('Promote your account to admin? This is a dev helper.')) return;
@@ -161,6 +163,30 @@ if (document.getElementById('tx-list')) {
       txListEl.textContent = 'Failed to load transactions';
       statusEl.textContent = err.message || 'Error';
       console.error(err);
+    }
+  }
+
+  async function confirmTransactionById() {
+    const txId = (txIdInput && txIdInput.value || '').trim();
+    if (!txId) { statusEl.textContent = 'Enter a transactionId'; return; }
+    try {
+      statusEl.textContent = 'Confirming ' + txId + '...';
+      const token = localStorage.getItem('token') || '';
+      const res = await fetch(API_BASE + '/api/admin/transactions/confirm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ transactionId: txId })
+      });
+      const j = await res.json().catch(()=>({}));
+      if (!res.ok) {
+        statusEl.textContent = `Confirm failed: ${res.status} ${j && (j.error||j.message) ? (j.error||j.message) : JSON.stringify(j)}`;
+        console.error('Confirm response:', res.status, j);
+        return;
+      }
+      statusEl.textContent = `Transaction ${txId} marked ${j.data && j.data.status ? j.data.status : 'Completed'}`;
+      await loadTransactions();
+    } catch (e) {
+      statusEl.textContent = e.message || 'Error confirming transaction';
+      console.error(e);
     }
   }
 
