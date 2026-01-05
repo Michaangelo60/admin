@@ -1,4 +1,5 @@
-const API_BASE = 'http://localhost:5000';
+// Resolve API base at runtime to avoid hardcoded localhost and allow deploys
+const API_BASE = (window.API_BASE || window.API_URL || location.origin).replace(/\/$/, '');
 
 // Simple helper
 function qs(sel, root=document) { return root.querySelector(sel); }
