@@ -60,13 +60,13 @@ if (document.getElementById('auth-form')) {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ email, password })
       });
+      // Read raw text first so we can always inspect the body even if it's not JSON
+      const raw = await loginRes.text().catch(()=>'<unreadable body>');
       let loginJ = {};
       try {
-        loginJ = await loginRes.json();
+        loginJ = raw ? JSON.parse(raw) : {};
       } catch (e) {
-        // If response isn't JSON (empty body, HTML error page, etc.), capture text for debugging
-        const raw = await loginRes.text().catch(()=>'<unreadable body>');
-        console.error('Login response not JSON. status=', loginRes.status, 'body=', raw);
+        console.error('Login response not JSON. status=', loginRes.status, 'content-type=', loginRes.headers && loginRes.headers.get ? loginRes.headers.get('content-type') : '<no-headers>', 'body=', raw);
         loginJ = {};
       }
       if (!loginRes.ok) throw new Error(loginJ.message || `Login failed (${loginRes.status})`);
