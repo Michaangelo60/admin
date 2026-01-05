@@ -24,6 +24,11 @@ function qsa(sel, root=document) { return Array.from(root.querySelectorAll(sel))
 
 // --- Auth / register / login page logic (index.html) ---
 if (document.getElementById('auth-form')) {
+  // If a token exists, redirect to admin dashboard so refreshing doesn't return to signup
+  try {
+    const existingToken = localStorage.getItem('token');
+    if (existingToken) { window.location.href = 'admin.html'; return; }
+  } catch (e) {}
   let isRegister = false;
   const formTitle = qs('#form-title');
   const toggleLink = qs('#toggle-link');
@@ -62,8 +67,16 @@ if (document.getElementById('auth-form')) {
         });
         const j = await res.json().catch(()=>({}));
         if (!res.ok) throw new Error(j.message || 'Register failed');
+        // If the register response returned a token, store it and go directly to admin
+        if (j && (j.token || j.data?.token)) {
+          const token = j.token || j.data.token;
+          const user = j.user || j.data?.user || j.data || {};
+          try { localStorage.setItem('token', token); localStorage.setItem('user', JSON.stringify(user)); } catch(e){}
+          window.location.href = 'admin.html';
+          return;
+        }
+        // Otherwise fallthrough to login
         statusEl.textContent = 'Registered. Logging in...';
-        // fallthrough to login
       }
 
       // login
