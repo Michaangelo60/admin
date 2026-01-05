@@ -1,5 +1,16 @@
 // Resolve API base at runtime to avoid hardcoded localhost and allow deploys
-const API_BASE = (window.API_BASE || window.API_URL || location.origin).replace(/\/$/, '');
+let API_BASE = window.API_BASE || window.API_URL || '';
+if (!API_BASE) {
+  const host = location.hostname || '';
+  // If running from a static admin host (e.g. admin-*.onrender.com), fallback to backend origin
+  if (host.includes('admin-') || host.includes('onrender.com')) {
+    API_BASE = 'https://xa-poloan.onrender.com';
+    console.warn('transaction-admin-site: using fallback API_BASE =', API_BASE);
+  } else {
+    API_BASE = location.origin;
+  }
+}
+API_BASE = API_BASE.replace(/\/$/, '');
 // Debug: expose resolved API base in console and footer for troubleshooting
 try {
   console.debug('transaction-admin-site: resolved API_BASE =', API_BASE);
