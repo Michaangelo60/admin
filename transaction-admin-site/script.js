@@ -70,7 +70,12 @@ if (document.getElementById('auth-form')) {
         localStorage.setItem('user', JSON.stringify(user));
         window.location.href = 'admin.html';
       } else {
-        statusEl.textContent = 'Login succeeded but no token returned';
+        // Show full server response to help diagnose why no token was returned
+        const bodyStr = JSON.stringify(loginJ, null, 2);
+        statusEl.textContent = 'Login succeeded but no token returned — see console for details';
+        console.error('Login response (no token):', loginJ);
+        // If there's a readable message, append it to the status for quick visibility
+        try { if (loginJ && (loginJ.message || loginJ.error)) statusEl.textContent += ' — ' + (loginJ.message || loginJ.error); } catch(e){}
       }
     } catch (err) {
       statusEl.textContent = err.message || 'Auth error';
