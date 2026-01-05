@@ -1,5 +1,11 @@
 // Resolve API base at runtime to avoid hardcoded localhost and allow deploys
 const API_BASE = (window.API_BASE || window.API_URL || location.origin).replace(/\/$/, '');
+// Debug: expose resolved API base in console and footer for troubleshooting
+try {
+  console.debug('transaction-admin-site: resolved API_BASE =', API_BASE);
+  const codeEl = document.querySelector('footer code');
+  if (codeEl) codeEl.textContent = API_BASE;
+} catch (e) {}
 
 // Simple helper
 function qs(sel, root=document) { return root.querySelector(sel); }
